@@ -88,8 +88,10 @@ class QobuzApi:
         return meta_data
 
     def download_file(self, file_url, file_path):
-        with urllib.request.urlopen(file_url) as response, open(file_path, 'wb') as out_file:
+        temp_file_path = "{}.qtmp".format(file_path)
+        with urllib.request.urlopen(file_url) as response, open(temp_file_path, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
+        shutil.move(temp_file_path, file_path)
 
     def play_track(self, track_id, with_cover=True, cache_only=False):
         self.set_track_id(track_id)
@@ -117,7 +119,7 @@ class QobuzApi:
             print("{title} already exists".format_map(params))
             wait = False
         else:
-            print("Downloading {title}...".format_map(params))
+            print("Caching {title}...".format_map(params))
             self.download_file(file_url, file_path)
 
         if with_cover:
@@ -152,7 +154,7 @@ class QobuzApi:
         json_response = self.get_json_from_url(artist_url)
         return json_response
 
-    def play_album(self, album_id):
+    def play_album(self, album_id, cache_only=False):
         album_meta_data = self.get_meta_data_for_album_id(album_id)
         params = {
             'artist': album_meta_data['artist']['name'],
@@ -160,7 +162,7 @@ class QobuzApi:
         }
         print("Getting tracks for \"{artist} - {album}\"".format_map(params))
         for track in album_meta_data['tracks']['items']:
-            self.play_track(track['id'])
+            self.play_track(track['id'], cache_only=cache_only)
 
     def play_artist(self, artist_id):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id)
