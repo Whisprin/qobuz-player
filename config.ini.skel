@@ -1,0 +1,8 @@
+[QOBUZ]
+app_secret =
+app_id =
+user_auth_token =
+
+[DOWNLOAD]
+directory =
+format = 
