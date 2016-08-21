@@ -6,6 +6,7 @@ import os
 import urllib.request
 import shutil
 import subprocess
+import taglib
 
 class QobuzFileError(Exception):
     def __init__(self,*args,**kwargs):
@@ -124,15 +125,24 @@ class QobuzApi:
 
         if with_cover:
             cover_url = track_meta_data['cover_url']
-            cover_path = os.path.join(album_path, 'cover.jpg')
+            cover_path = os.path.join(album_path, 'folder.jpg')
 
             if not os.path.isfile(cover_path):
                 self.download_file(cover_url, cover_path)
+
+        self.tag_file(file_path, track_meta_data)
 
         if not cache_only:
             print("Playing \"{title}\" for {duration}s".format_map(params))
             #time.sleep(int(track_meta_data['duration']))
             subprocess.call(["mplayer", "-msgcolor", "-nolirc", "-msglevel", "cplayer=-1:codeccfg=-1:decaudio=-1:decvideo=-1:demux=-1:demuxer=-1:subreader=-1", file_path])
+
+    def tag_file(self, file_path, meta_data):
+        song = taglib.File(file_path)
+        song.tags["ARTIST"] = meta_data['album_artist']
+        song.tags["ALBUM"] = meta_data['album']
+        song.tags["GENRE"] = meta_data['genre']
+        song.save()
 
     def get_meta_data_for_album_id(self, album_id):
         params = {
