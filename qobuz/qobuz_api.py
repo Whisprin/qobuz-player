@@ -5,6 +5,11 @@ import json
 import os
 import urllib.request
 import shutil
+import subprocess
+
+class QobuzFileError(Exception):
+    def __init__(self,*args,**kwargs):
+        Exception.__init__(self,*args,**kwargs)
 
 class QobuzApi:
     def __init__(self, app_id, app_secret, user_auth_token, format_id=6, base_path='.'):
@@ -51,7 +56,12 @@ class QobuzApi:
         json_response = json.loads(response.text)
 
         file_url = json_response['url']
+        if 'sample' in json_response:
+            raise QobuzFileError("Track {} is a sample.".format(self.track_id))
         return file_url
+
+    def print_as_json(self, data):
+        print(json.dumps(data, indent=4, sort_keys=True))
 
     def get_json_from_url(self, url):
         response = requests.get(url)
@@ -81,9 +91,14 @@ class QobuzApi:
         with urllib.request.urlopen(file_url) as response, open(file_path, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
 
-    def download_track(self, track_id, with_cover=True, wait=True):
+    def play_track(self, track_id, with_cover=True, cache_only=False):
         self.set_track_id(track_id)
-        file_url = self.get_file_url()
+        try:
+            file_url = self.get_file_url()
+        except QobuzFileError as e:
+            print(e)
+            return
+
         track_meta_data = self.get_meta_data()
         album_path = os.path.join(track_meta_data['album_artist'], track_meta_data['album'])
         os.makedirs(album_path, exist_ok=True)
@@ -112,9 +127,10 @@ class QobuzApi:
             if not os.path.isfile(cover_path):
                 self.download_file(cover_url, cover_path)
 
-        if wait:
-            print("Waiting for \"{title}\" ({duration}s)".format_map(params))
-            time.sleep(int(track_meta_data['duration']))
+        if not cache_only:
+            print("Playing \"{title}\" for {duration}s".format_map(params))
+            #time.sleep(int(track_meta_data['duration']))
+            subprocess.call(["mplayer", "-msgcolor", "-nolirc", "-msglevel", "cplayer=-1:codeccfg=-1:decaudio=-1:decvideo=-1:demux=-1:demuxer=-1:subreader=-1", file_path])
 
     def get_meta_data_for_album_id(self, album_id):
         params = {
@@ -126,7 +142,17 @@ class QobuzApi:
         json_response = self.get_json_from_url(album_url)
         return json_response
 
-    def download_album(self, album_id):
+    def get_meta_data_for_artist_id(self, artist_id):
+        params = {
+            'app_id': self.app_id,
+            'artist_id': artist_id
+        }
+
+        artist_url = "http://www.qobuz.com/api.json/0.2/artist/get?app_id={app_id}&artist_id={artist_id}&extra=albums,tracks&limit=50".format_map(params)
+        json_response = self.get_json_from_url(artist_url)
+        return json_response
+
+    def play_album(self, album_id):
         album_meta_data = self.get_meta_data_for_album_id(album_id)
         params = {
             'artist': album_meta_data['artist']['name'],
@@ -134,4 +160,42 @@ class QobuzApi:
         }
         print("Getting tracks for \"{artist} - {album}\"".format_map(params))
         for track in album_meta_data['tracks']['items']:
-            self.download_track(track['id'])
+            self.play_track(track['id'])
+
+    def play_artist(self, artist_id):
+        artist_meta_data = self.get_meta_data_for_artist_id(artist_id)
+        params = {
+            'artist': artist_meta_data['name']
+        }
+        print("Getting tracks for \"{artist}\"".format_map(params))
+        for track in artist_meta_data['tracks']['items']:
+            self.play_track(track['id'])
+
+    def search_catalog(self, query, item_type=None, limit=2):
+        if item_type:
+            params_type = "&type={}".format(item_type)
+        else:
+            params_type = ""
+        if limit:
+            params_limit = "&limit={}".format(limit)
+        else:
+            params_type = ""
+
+        params = {
+            'app_id': self.app_id,
+            'query': query,
+            'type': params_type,
+            'limit': params_limit
+        }
+
+        search_url = "http://www.qobuz.com/api.json/0.2/catalog/search?app_id={app_id}&query={query}{type}{limit}".format_map(params)
+        json_response = self.get_json_from_url(search_url)
+        return json_response
+
+    def search_catalog_for_artists(self, artist, limit=2):
+        response = self.search_catalog(artist, 'artists')
+        return response['artists']['items']
+
+    def search_catalog_for_albums(self, album, limit=2):
+        response = self.search_catalog(album, 'albums')
+        return response['albums']['items']
