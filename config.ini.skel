@@ -5,4 +5,4 @@ user_auth_token =
 
 [DOWNLOAD]
 directory =
-format = 
+format_id = 
