@@ -5,4 +5,8 @@ user_auth_token =
 
 [DOWNLOAD]
 directory =
-format_id = 
+format_id =
+
+[LASTFM]
+api_key =
+api_secret =

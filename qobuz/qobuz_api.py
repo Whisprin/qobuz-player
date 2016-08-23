@@ -7,6 +7,7 @@ import urllib.request
 import shutil
 import subprocess
 import taglib
+from unidecode import unidecode
 
 class QobuzFileError(Exception):
     def __init__(self,*args,**kwargs):
@@ -56,7 +57,10 @@ class QobuzApi:
         response = requests.get(get_file_url)
         json_response = json.loads(response.text)
 
-        file_url = json_response['url']
+        if 'url' in json_response:
+            file_url = json_response['url']
+        else:
+            raise QobuzFileError("Track {} doesn't provide an url.".format(self.track_id))
         if 'sample' in json_response:
             raise QobuzFileError("Track {} is a sample.".format(self.track_id))
         return file_url
@@ -100,7 +104,7 @@ class QobuzApi:
             file_url = self.get_file_url()
         except QobuzFileError as e:
             print(e)
-            return
+            return False
 
         track_meta_data = self.get_meta_data()
         album_path = os.path.join(track_meta_data['album_artist'], track_meta_data['album'])
@@ -136,6 +140,7 @@ class QobuzApi:
             print("Playing \"{title}\" for {duration}s".format_map(params))
             #time.sleep(int(track_meta_data['duration']))
             subprocess.call(["mplayer", "-msgcolor", "-nolirc", "-msglevel", "cplayer=-1:codeccfg=-1:decaudio=-1:decvideo=-1:demux=-1:demuxer=-1:subreader=-1", file_path])
+        return True
 
     def tag_file(self, file_path, meta_data):
         song = taglib.File(file_path)
@@ -174,14 +179,18 @@ class QobuzApi:
         for track in album_meta_data['tracks']['items']:
             self.play_track(track['id'], cache_only=cache_only)
 
-    def play_artist(self, artist_id):
+    def play_artist(self, artist_id, cache_only=False, track_limit=None):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id)
         params = {
             'artist': artist_meta_data['name']
         }
         print("Getting tracks for \"{artist}\"".format_map(params))
+        played_track_count = 0
         for track in artist_meta_data['tracks']['items']:
-            self.play_track(track['id'])
+            if self.play_track(track['id'], cache_only=cache_only):
+                played_track_count += 1
+            if track_limit and played_track_count >= track_limit:
+                return
 
     def search_catalog(self, query, item_type=None, limit=2):
         if item_type:
@@ -204,9 +213,15 @@ class QobuzApi:
         json_response = self.get_json_from_url(search_url)
         return json_response
 
-    def search_catalog_for_artists(self, artist, limit=2):
-        response = self.search_catalog(artist, 'artists')
+    def search_catalog_for_artists(self, artist, limit=5):
+        response = self.search_catalog(artist, 'artists', limit=limit)
         return response['artists']['items']
+
+    def get_artist_from_catalog(self, artist):
+        response = self.search_catalog(artist, 'artists', limit=1)
+        artist_item = response['artists']['items'][0]
+        if unidecode(artist.lower()) == artist_item['name'].lower():
+            return artist_item
 
     def search_catalog_for_albums(self, album, limit=2):
         response = self.search_catalog(album, 'albums')
