@@ -68,6 +68,9 @@ class QobuzApi:
     def print_as_json(self, data):
         print(json.dumps(data, indent=4, sort_keys=True))
 
+    def get_save_file_name(self, file_name):
+        return file_name.replace('/', '-')
+
     def get_json_from_url(self, url):
         response = requests.get(url)
         json_response = json.loads(response.text)
@@ -107,7 +110,9 @@ class QobuzApi:
             return False
 
         track_meta_data = self.get_meta_data()
-        album_path = os.path.join(track_meta_data['album_artist'], track_meta_data['album'])
+        artist = self.get_save_file_name(track_meta_data['album_artist'])
+        album = self.get_save_file_name(track_meta_data['album'])
+        album_path = os.path.join(artist, album)
         os.makedirs(album_path, exist_ok=True)
 
         params = {
@@ -118,7 +123,8 @@ class QobuzApi:
         }
 
         file_name = "{track_number:02d} {title}.{ext}".format_map(params)
-        file_path = os.path.join(album_path, file_name)
+        save_file_name = self.get_save_file_name(file_name)
+        file_path = os.path.join(album_path, save_file_name)
 
         if os.path.isfile(file_path):
             print("{title} already exists".format_map(params))
