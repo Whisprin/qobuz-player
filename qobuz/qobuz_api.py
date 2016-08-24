@@ -128,10 +128,10 @@ class QobuzApi:
 
         if os.path.isfile(file_path):
             print("{title} already exists".format_map(params))
-            wait = False
         else:
             print("Caching {title}...".format_map(params))
             self.download_file(file_url, file_path)
+            self.tag_file(file_path, track_meta_data)
 
         if with_cover:
             cover_url = track_meta_data['cover_url']
@@ -139,8 +139,6 @@ class QobuzApi:
 
             if not os.path.isfile(cover_path):
                 self.download_file(cover_url, cover_path)
-
-        self.tag_file(file_path, track_meta_data)
 
         if not cache_only:
             print("Playing \"{title}\" for {duration}s".format_map(params))
