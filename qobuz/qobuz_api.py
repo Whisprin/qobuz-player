@@ -165,13 +165,14 @@ class QobuzApi:
         json_response = self.get_json_from_url(album_url)
         return json_response
 
-    def get_meta_data_for_artist_id(self, artist_id):
+    def get_meta_data_for_artist_id(self, artist_id, extra=''):
         params = {
             'app_id': self.app_id,
-            'artist_id': artist_id
+            'artist_id': artist_id,
+            'extra': extra
         }
 
-        artist_url = "http://www.qobuz.com/api.json/0.2/artist/get?app_id={app_id}&artist_id={artist_id}&extra=albums,tracks&limit=50".format_map(params)
+        artist_url = "http://www.qobuz.com/api.json/0.2/artist/get?app_id={app_id}&artist_id={artist_id}&limit=50&extra={extra}".format_map(params)
         json_response = self.get_json_from_url(artist_url)
         return json_response
 
@@ -186,7 +187,7 @@ class QobuzApi:
             self.play_track(track['id'], cache_only=cache_only)
 
     def play_artist(self, artist_id, cache_only=False, track_limit=None):
-        artist_meta_data = self.get_meta_data_for_artist_id(artist_id)
+        artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='tracks')
         params = {
             'artist': artist_meta_data['name']
         }
@@ -197,6 +198,12 @@ class QobuzApi:
                 played_track_count += 1
             if track_limit and played_track_count >= track_limit:
                 return
+
+    def play_artist_albums(self, artist_id, cache_only=False):
+        artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
+        print("Getting tracks for \"{}\"".format(artist_meta_data['name']))
+        for album in artist_meta_data['albums']['items']:
+            self.play_album(album['id'], cache_only=cache_only)
 
     def search_catalog(self, query, item_type=None, limit=2):
         if item_type:
