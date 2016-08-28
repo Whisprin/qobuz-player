@@ -46,16 +46,13 @@ class QobuzApi:
         params = {
             'track_id': self.track_id,
             'format_id': self.format_id,
-            'app_id': self.app_id,
             'request_ts': self.request_ts,
-            'request_sig': self.get_request_sig(),
-            'user_auth_token': self.user_auth_token
+            'request_sig': self.get_request_sig()
         }
 
-        get_file_url = "http://www.qobuz.com/api.json/0.2/track/getFileUrl?track_id={track_id}&format_id={format_id}&app_id={app_id}&intent=stream&request_ts={request_ts}&request_sig={request_sig}&user_auth_token={user_auth_token}".format_map(params)
+        get_file_url = "http://www.qobuz.com/api.json/0.2/track/getFileUrl?track_id={track_id}&format_id={format_id}&intent=stream&request_ts={request_ts}&request_sig={request_sig}".format_map(params)
 
-        response = requests.get(get_file_url)
-        json_response = json.loads(response.text)
+        json_response = self.get_json_from_url(get_file_url)
 
         if 'url' in json_response:
             file_url = json_response['url']
@@ -74,16 +71,16 @@ class QobuzApi:
         return file_name.replace('/', '-')
 
     def get_json_from_url(self, url):
-        response = requests.get(url)
+        headers = {
+            'X-User-Auth-Token': self.user_auth_token,
+            'X-App-Id': self.app_id
+        }
+        response = requests.get(url, headers=headers)
         json_response = json.loads(response.text)
         return json_response
 
     def get_meta_data(self):
-        params = {
-            'track_id': self.track_id,
-            'app_id': self.app_id
-        }
-        meta_data_url = "http://www.qobuz.com/api.json/0.2/track/get?track_id={track_id}&app_id={app_id}".format_map(params)
+        meta_data_url = "http://www.qobuz.com/api.json/0.2/track/get?track_id={}".format(self.track_id)
         json_response = self.get_json_from_url(meta_data_url)
 
         meta_data = {
@@ -156,23 +153,17 @@ class QobuzApi:
         song.save()
 
     def get_meta_data_for_album_id(self, album_id):
-        params = {
-            'app_id': self.app_id,
-            'album_id': album_id
-        }
-
-        album_url = "http://www.qobuz.com/api.json/0.2/album/get?app_id={app_id}&album_id={album_id}".format_map(params)
+        album_url = "http://www.qobuz.com/api.json/0.2/album/get?album_id={}".format(album_id)
         json_response = self.get_json_from_url(album_url)
         return json_response
 
     def get_meta_data_for_artist_id(self, artist_id, extra=''):
         params = {
-            'app_id': self.app_id,
             'artist_id': artist_id,
             'extra': extra
         }
 
-        artist_url = "http://www.qobuz.com/api.json/0.2/artist/get?app_id={app_id}&artist_id={artist_id}&limit=50&extra={extra}".format_map(params)
+        artist_url = "http://www.qobuz.com/api.json/0.2/artist/get?artist_id={artist_id}&limit=50&extra={extra}".format_map(params)
         json_response = self.get_json_from_url(artist_url)
         return json_response
 
@@ -221,13 +212,12 @@ class QobuzApi:
             params_type = ""
 
         params = {
-            'app_id': self.app_id,
             'query': query,
             'type': params_type,
             'limit': params_limit
         }
 
-        search_url = "http://www.qobuz.com/api.json/0.2/catalog/search?app_id={app_id}&query={query}{type}{limit}".format_map(params)
+        search_url = "http://www.qobuz.com/api.json/0.2/catalog/search?query={query}{type}{limit}".format_map(params)
         json_response = self.get_json_from_url(search_url)
         return json_response
 
