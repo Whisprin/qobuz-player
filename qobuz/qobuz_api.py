@@ -227,10 +227,11 @@ class QobuzApi:
         return response['artists']['items']
 
     def get_artist_from_catalog(self, artist):
-        response = self.search_catalog(artist, 'artists', limit=1)
-        artist_item = response['artists']['items'][0]
-        if unidecode(artist.lower()) == artist_item['name'].lower():
-            return artist_item
+        response = self.search_catalog(artist, 'artists', limit=3)
+        # sometimes another but the first result is a perfect match
+        for artist_item in response['artists']['items']:
+            if unidecode(artist.lower()) == artist_item['name'].lower():
+                return artist_item
 
     def search_catalog_for_albums(self, album, limit=2):
         response = self.search_catalog(album, 'albums')
