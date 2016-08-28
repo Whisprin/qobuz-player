@@ -69,6 +69,8 @@ class QobuzApi:
         print(json.dumps(data, indent=4, sort_keys=True))
 
     def get_save_file_name(self, file_name):
+        if file_name.startswith('.'):
+            file_name = '_{}'.format(file_name)
         return file_name.replace('/', '-')
 
     def get_json_from_url(self, url):
