@@ -201,9 +201,14 @@ class QobuzApi:
 
     def play_artist_albums(self, artist_id, cache_only=False):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
-        print("Getting tracks for \"{}\"".format(artist_meta_data['name']))
+        artist_name = artist_meta_data['name']
+        print("Getting tracks for \"{}\"".format(artist_name))
+
         for album in artist_meta_data['albums']['items']:
             self.play_album(album['id'], cache_only=cache_only)
+
+        with open('artist.log', 'a') as artist_log:
+            artist_log.write('{},{},{}\n'.format(artist_id, artist_name, time.time()))
 
     def search_catalog(self, query, item_type=None, limit=2):
         if item_type:
