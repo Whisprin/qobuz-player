@@ -202,6 +202,16 @@ class QobuzApi:
         with open('artist.log', 'a') as artist_log:
             artist_log.write('{},{},{}\n'.format(artist_id, artist_name, time.time()))
 
+    def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
+        params = {
+            'artist_id': artist_id,
+            'limit': artist_limit
+        }
+        similar_artist_url = 'http://www.qobuz.com/api.json/0.2/artist/getSimilarArtists?artist_id={artist_id}&limit={limit}'.format_map(params)
+        similar_artists = self.get_json_from_url(similar_artist_url)
+        for artist in similar_artists['artists']['items']:
+            self.play_artist(artist['id'], track_limit=track_limit, cache_only=cache_only)
+
     def search_catalog(self, query, item_type=None, limit=2):
         if item_type:
             params_type = "&type={}".format(item_type)
