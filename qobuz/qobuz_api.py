@@ -196,10 +196,19 @@ class QobuzApi:
         print("Getting tracks for \"{}\"".format(artist_name))
 
         for album in artist_meta_data['albums']['items']:
-            if not confirm_album or input('Play album: {}? '.format(album['title'])) == 'y':
+            skip_album = False
+            album_log_file_name = '.logs/artist-albums-{}.log'.format(artist_id)
+            with open(album_log_file_name, 'a+') as album_log:
+                album_log.seek(0)
+                for album_id in album_log.readlines():
+                    if album_id.rstrip() == album['id']:
+                        skip_album = True
+            if not skip_album and (not confirm_album or input('Play album: {}? '.format(album['title'])) == 'y'):
                 self.play_album(album['id'], cache_only=cache_only)
+                with open(album_log_file_name, 'a') as album_log:
+                    album_log.write('{}\n'.format(album['id']))
 
-        with open('artist.log', 'a') as artist_log:
+        with open('.logs/artists.log', 'a') as artist_log:
             artist_log.write('{},{},{}\n'.format(artist_id, artist_name, time.time()))
 
     def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
