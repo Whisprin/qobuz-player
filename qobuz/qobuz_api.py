@@ -100,13 +100,8 @@ class QobuzApi:
             shutil.copyfileobj(response, out_file)
         shutil.move(temp_file_path, file_path)
 
-    def play_track(self, track_id, with_cover=True, cache_only=False):
+    def play_track(self, track_id, with_cover=True, cache_only=False, skip_existing=False):
         self.set_track_id(track_id)
-        try:
-            file_url = self.get_file_url()
-        except QobuzFileError as e:
-            print(e)
-            return False
 
         track_meta_data = self.get_meta_data()
         artist = self.get_save_file_name(track_meta_data['album_artist'])
@@ -125,9 +120,19 @@ class QobuzApi:
         save_file_name = self.get_save_file_name(file_name)
         file_path = os.path.join(album_path, save_file_name)
 
+        track_exists = False
         if os.path.isfile(file_path):
+            track_exists = True
             print("{title} already exists".format_map(params))
         else:
+            try:
+                file_url = self.get_file_url()
+            except QobuzFileError as e:
+                print(e)
+                missing_file_path = '{}.missing'.format(file_path)
+                with open(missing_file_path, 'w'):
+                    pass
+                return False
             print("Caching {title}...".format_map(params))
             self.download_file(file_url, file_path)
             self.tag_file(file_path, track_meta_data)
@@ -139,7 +144,7 @@ class QobuzApi:
             if not os.path.isfile(cover_path):
                 self.download_file(cover_url, cover_path)
 
-        if not cache_only:
+        if not cache_only and not (skip_existing and track_exists):
             print("Playing \"{title}\" for {duration}s".format_map(params))
             #time.sleep(int(track_meta_data['duration']))
             subprocess.call(["mplayer", "-msgcolor", "-nolirc", "-msglevel", "cplayer=-1:codeccfg=-1:decaudio=-1:decvideo=-1:demux=-1:demuxer=-1:subreader=-1", file_path])
@@ -167,7 +172,7 @@ class QobuzApi:
         json_response = self.get_json_from_url(artist_url)
         return json_response
 
-    def play_album(self, album_id, cache_only=False):
+    def play_album(self, album_id, cache_only=False, skip_existing=False):
         album_meta_data = self.get_meta_data_for_album_id(album_id)
         params = {
             'artist': album_meta_data['artist']['name'],
@@ -175,7 +180,7 @@ class QobuzApi:
         }
         print("Getting tracks for \"{artist} - {album}\"".format_map(params))
         for track in album_meta_data['tracks']['items']:
-            self.play_track(track['id'], cache_only=cache_only)
+            self.play_track(track['id'], cache_only=cache_only, skip_existing=skip_existing)
 
     def play_artist(self, artist_id, cache_only=False, track_limit=None):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='tracks')
@@ -190,7 +195,7 @@ class QobuzApi:
             if track_limit and played_track_count >= track_limit:
                 return
 
-    def play_artist_albums(self, artist_id, confirm_album=False, cache_only=False):
+    def play_artist_albums(self, artist_id, confirm_album=False, cache_only=False, skip_existing=False):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
         artist_name = artist_meta_data['name']
         print("Getting tracks for \"{}\"".format(artist_name))
@@ -204,7 +209,7 @@ class QobuzApi:
                     if album_id.rstrip() == album['id']:
                         skip_album = True
             if not skip_album and (not confirm_album or input('Play album: {}? '.format(album['title'])) == 'y'):
-                self.play_album(album['id'], cache_only=cache_only)
+                self.play_album(album['id'], cache_only=cache_only, skip_existing=skip_existing)
                 with open(album_log_file_name, 'a') as album_log:
                     album_log.write('{}\n'.format(album['id']))
 
