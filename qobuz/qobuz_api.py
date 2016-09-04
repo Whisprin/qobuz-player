@@ -90,6 +90,8 @@ class QobuzApi:
             'title': json_response['title'],
             'cover_url': json_response['album']['image']['large'],
             'track_number': json_response['track_number'],
+            'cd_count': json_response['album']['media_count'],
+            'cd_number': json_response['media_number'],
             'duration': json_response['duration']
         }
         return meta_data
@@ -107,6 +109,8 @@ class QobuzApi:
         artist = self.get_save_file_name(track_meta_data['album_artist'])
         album = self.get_save_file_name(track_meta_data['album'])
         album_path = os.path.join(artist, album)
+        if track_meta_data['cd_count'] > 1:
+            album_path = os.path.join(album_path, 'CD{}'.format(track_meta_data['cd_number']))
         os.makedirs(album_path, exist_ok=True)
 
         params = {
