@@ -10,3 +10,6 @@ format_id =
 [LASTFM]
 api_key =
 api_secret =
+
+[LOG]
+directory =

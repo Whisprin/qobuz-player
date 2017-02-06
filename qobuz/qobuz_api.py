@@ -14,12 +14,13 @@ class QobuzFileError(Exception):
         Exception.__init__(self,*args,**kwargs)
 
 class QobuzApi:
-    def __init__(self, app_id, app_secret, user_auth_token, format_id=6, base_path='.'):
+    def __init__(self, app_id, app_secret, user_auth_token, format_id=6, cache_dir='.', log_dir='.'):
         self.app_id = app_id
         self.app_secret = app_secret
         self.user_auth_token = user_auth_token
         self.format_id = format_id
-        os.chdir(base_path)
+        self.cache_dir = cache_dir
+        self.log_dir = log_dir
 
     def set_track_id(self, track_id):
         self.track_id = track_id
@@ -96,11 +97,21 @@ class QobuzApi:
         }
         return meta_data
 
-    def download_file(self, file_url, file_path):
+    def absolute_opener(self, path, flags, base_path):
+        dir_fd = os.open(base_path, os.O_RDONLY, 0o600)
+        return os.open(path, flags, dir_fd=dir_fd)
+
+    def cache_opener(self, path, flags):
+        return self.absolute_opener(path, flags, self.cache_dir)
+
+    def log_opener(self, path, flags):
+        return self.absolute_opener(path, flags, self.log_dir)
+
+    def cache_file(self, file_url, file_path):
         temp_file_path = "{}.qtmp".format(file_path)
-        with urllib.request.urlopen(file_url) as response, open(temp_file_path, 'wb') as out_file:
+        with urllib.request.urlopen(file_url) as response, open(temp_file_path, 'wb', opener=self.cache_opener) as out_file:
             shutil.copyfileobj(response, out_file)
-        shutil.move(temp_file_path, file_path)
+        shutil.move(self.get_cache_file_path(temp_file_path), self.get_cache_file_path(file_path))
 
     def play_track(self, track_id, with_cover=True, cache_only=False, skip_existing=False):
         self.set_track_id(track_id)
@@ -111,7 +122,7 @@ class QobuzApi:
         album_path = os.path.join(artist, album)
         if track_meta_data['cd_count'] > 1:
             album_path = os.path.join(album_path, 'CD{}'.format(track_meta_data['cd_number']))
-        os.makedirs(album_path, exist_ok=True)
+        os.makedirs(self.get_cache_file_path(album_path), exist_ok=True)
 
         params = {
             'track_number': int(track_meta_data['track_number']),
@@ -125,7 +136,7 @@ class QobuzApi:
         file_path = os.path.join(album_path, save_file_name)
 
         track_exists = False
-        if os.path.isfile(file_path):
+        if os.path.isfile(self.get_cache_file_path(file_path)):
             track_exists = True
             print("{title} already exists".format_map(params))
         else:
@@ -134,11 +145,11 @@ class QobuzApi:
             except QobuzFileError as e:
                 print(e)
                 missing_file_path = '{}.missing'.format(file_path)
-                with open(missing_file_path, 'w'):
+                with open(missing_file_path, 'w', opener=cache_opener):
                     pass
                 return False
             print("Caching {title}...".format_map(params))
-            self.download_file(file_url, file_path)
+            self.cache_file(file_url, file_path)
             self.tag_file(file_path, track_meta_data)
 
         if with_cover:
@@ -146,16 +157,20 @@ class QobuzApi:
             cover_path = os.path.join(album_path, 'folder.jpg')
 
             if not os.path.isfile(cover_path):
-                self.download_file(cover_url, cover_path)
+                self.cache_file(cover_url, cover_path)
 
         if not cache_only and not (skip_existing and track_exists):
             print("Playing \"{title}\" for {duration}s".format_map(params))
             #time.sleep(int(track_meta_data['duration']))
-            subprocess.call(["mplayer", "-msgcolor", "-nolirc", "-msglevel", "cplayer=-1:codeccfg=-1:decaudio=-1:decvideo=-1:demux=-1:demuxer=-1:subreader=-1", file_path])
+            absolute_file_path = self.get_cache_file_path(file_path)
+            subprocess.call(["mplayer", "-msgcolor", "-nolirc", "-msglevel", "cplayer=-1:codeccfg=-1:decaudio=-1:decvideo=-1:demux=-1:demuxer=-1:subreader=-1", absolute_file_path])
         return True
 
+    def get_cache_file_path(self, file_path):
+        return os.path.join(self.cache_dir, file_path)
+
     def tag_file(self, file_path, meta_data):
-        song = taglib.File(file_path)
+        song = taglib.File(self.get_cache_file_path(file_path))
         song.tags["ARTIST"] = meta_data['album_artist']
         song.tags["ALBUM"] = meta_data['album']
         song.tags["GENRE"] = meta_data['genre']
@@ -206,18 +221,18 @@ class QobuzApi:
 
         for album in artist_meta_data['albums']['items']:
             skip_album = False
-            album_log_file_name = '.logs/artist-albums-{}.log'.format(artist_id)
-            with open(album_log_file_name, 'a+') as album_log:
+            album_log_file_name = 'artist-albums-{}.log'.format(artist_id)
+            with open(album_log_file_name, 'a+', opener=self.log_opener) as album_log:
                 album_log.seek(0)
                 for album_id in album_log.readlines():
                     if album_id.rstrip() == album['id']:
                         skip_album = True
             if not skip_album and (not confirm_album or input('Play album: {}? '.format(album['title'])) == 'y'):
                 self.play_album(album['id'], cache_only=cache_only, skip_existing=skip_existing)
-                with open(album_log_file_name, 'a') as album_log:
+                with open(album_log_file_name, 'a', opener=self.log_opener) as album_log:
                     album_log.write('{}\n'.format(album['id']))
 
-        with open('.logs/artists.log', 'a') as artist_log:
+        with open('artists.log', 'a', opener=self.log_opener) as artist_log:
             artist_log.write('{},{},{}\n'.format(artist_id, artist_name, time.time()))
 
     def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
@@ -255,10 +270,11 @@ class QobuzApi:
         return response['artists']['items']
 
     def get_artist_from_catalog(self, artist):
-        response = self.search_catalog(artist, 'artists', limit=3)
+        artists = self.search_catalog_for_artists(artist, limit=3)
         # sometimes another but the first result is a perfect match
-        for artist_item in response['artists']['items']:
-            if unidecode(artist.lower()) == artist_item['name'].lower():
+        for artist_item in artists:
+            #if unidecode(artist.lower()) == artist_item['name'].lower():
+            if artist == artist_item['name']:
                 return artist_item
 
     def search_catalog_for_albums(self, album, limit=2):
