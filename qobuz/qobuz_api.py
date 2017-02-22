@@ -66,10 +66,27 @@ class QobuzApi:
     def print_as_json(self, data):
         print(json.dumps(data, indent=4, sort_keys=True))
 
-    def get_save_file_name(self, file_name):
+    def get_save_name(self, file_name, file_type):
         if file_name.startswith('.'):
             file_name = '_{}'.format(file_name)
-        return file_name.replace('/', '-')
+        file_name = file_name.replace('/', '-')
+        # max file name lenght is 255
+        if len(file_name) > 255:
+            # for files truncate before extension, and make room for it
+            if file_type == 'file':
+                extension_position = file_name.rfind('.')
+                extension_length = len(file_name[extension_position:])
+                file_name_length = 255 - extension_length
+                file_name = file_name[:file_name_length] + file_name[extension_position:]
+            else:
+                file_name = file_name[:255]
+        return file_name
+
+    def get_save_folder_name(self, file_name):
+        return self.get_save_name(file_name, 'folder')
+
+    def get_save_file_name(self, file_name):
+        return self.get_save_name(file_name, 'file')
 
     def get_json_from_url(self, url):
         headers = {
@@ -110,7 +127,7 @@ class QobuzApi:
         return self.absolute_opener(path, flags, self.log_dir)
 
     def cache_file(self, file_url, file_path):
-        temp_file_path = "{}.qtmp".format(file_path)
+        temp_file_path = "{}.qtmp".format(file_path[:-5])
         with urllib.request.urlopen(file_url) as response, open(temp_file_path, 'wb', opener=self.cache_opener) as out_file:
             shutil.copyfileobj(response, out_file)
         shutil.move(self.get_cache_file_path(temp_file_path), self.get_cache_file_path(file_path))
@@ -119,8 +136,8 @@ class QobuzApi:
         self.set_track_id(track_id)
 
         track_meta_data = self.get_meta_data()
-        artist = self.get_save_file_name(track_meta_data['album_artist'])
-        album = self.get_save_file_name(track_meta_data['album'])
+        artist = self.get_save_folder_name(track_meta_data['album_artist'])
+        album = self.get_save_folder_name(track_meta_data['album'])
         album_path = os.path.join(artist, album)
         if track_meta_data['cd_count'] > 1:
             album_path = os.path.join(album_path, 'CD{}'.format(track_meta_data['cd_number']))
@@ -134,8 +151,7 @@ class QobuzApi:
         }
 
         file_name = "{track_number:02d} {title}.{ext}".format_map(params)
-        save_file_name = self.get_save_file_name(file_name)
-        file_path = os.path.join(album_path, save_file_name)
+        file_path = os.path.join(album_path, self.get_save_file_name(file_name))
 
         track_exists = False
         if os.path.isfile(self.get_cache_file_path(file_path)):
