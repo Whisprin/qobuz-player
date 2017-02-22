@@ -128,7 +128,12 @@ class QobuzApi:
 
     def cache_file(self, file_url, file_path):
         temp_file_path = "{}.qtmp".format(file_path[:-5])
-        with urllib.request.urlopen(file_url) as response, open(temp_file_path, 'wb', opener=self.cache_opener) as out_file:
+        try:
+            response = urllib.request.urlopen(file_url)
+        except urllib.error.HTTPError as e:
+            print("{} ({}): {}".format(e.reason, e.code, file_url))
+            return
+        with open(temp_file_path, 'wb', opener=self.cache_opener) as out_file:
             shutil.copyfileobj(response, out_file)
         shutil.move(self.get_cache_file_path(temp_file_path), self.get_cache_file_path(file_path))
 
