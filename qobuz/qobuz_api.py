@@ -147,7 +147,7 @@ class QobuzApi:
             except QobuzFileError as e:
                 print(e)
                 missing_file_path = '{}.missing'.format(file_path)
-                with open(missing_file_path, 'w', opener=cache_opener):
+                with open(missing_file_path, 'w', opener=self.cache_opener):
                     pass
                 return False
             print("Caching {title}...".format_map(params))
