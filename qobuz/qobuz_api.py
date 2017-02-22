@@ -86,6 +86,7 @@ class QobuzApi:
 
         meta_data = {
             'album_artist': json_response['album']['artist']['name'],
+            'artist': json_response['performer']['name'],
             'album' :json_response['album']['title'],
             'genre': json_response['album']['genre']['name'],
             'title': json_response['title'],
@@ -93,7 +94,8 @@ class QobuzApi:
             'track_number': json_response['track_number'],
             'cd_count': json_response['album']['media_count'],
             'cd_number': json_response['media_number'],
-            'duration': json_response['duration']
+            'duration': json_response['duration'],
+            'released_at': time.gmtime(json_response['album']['released_at'])
         }
         return meta_data
 
@@ -171,9 +173,15 @@ class QobuzApi:
 
     def tag_file(self, file_path, meta_data):
         song = taglib.File(self.get_cache_file_path(file_path))
-        song.tags["ARTIST"] = meta_data['album_artist']
+        song.tags['TITLE'] = meta_data['title']
         song.tags["ALBUM"] = meta_data['album']
+        song.tags['ALBUMARTIST'] = meta_data['album_artist']
+        song.tags["ARTIST"] = meta_data['artist']
         song.tags["GENRE"] = meta_data['genre']
+        song.tags["DATE"] = str(meta_data['released_at'].tm_year)
+        song.tags['DISCNUMBER'] = str(meta_data['cd_number'])
+        song.tags['TOTALDISCS'] = str(meta_data['cd_count'])
+        song.tags['TRACKNUMBER'] = str(meta_data['track_number'])
         song.save()
 
     def get_meta_data_for_album_id(self, album_id):
@@ -270,7 +278,7 @@ class QobuzApi:
         return response['artists']['items']
 
     def get_artist_from_catalog(self, artist):
-        artists = self.search_catalog_for_artists(artist, limit=3)
+        artists = self.search_catalog_for_artists(artist, limit=5)
         # sometimes another but the first result is a perfect match
         for artist_item in artists:
             #if unidecode(artist.lower()) == artist_item['name'].lower():
