@@ -69,7 +69,8 @@ class QobuzApi:
     def get_save_name(self, file_name, file_type):
         if file_name.startswith('.'):
             file_name = '_{}'.format(file_name)
-        file_name = file_name.replace('/', '-')
+        # ext doesn't allow slash, samba no quote
+        file_name = file_name.replace('/', '-').replace('"','')
         # max file name lenght is 255
         if len(file_name) > 255:
             # for files truncate before extension, and make room for it
