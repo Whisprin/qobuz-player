@@ -257,7 +257,8 @@ class QobuzApi:
                 for album_id in album_log.readlines():
                     if album_id.rstrip() == album['id']:
                         skip_album = True
-            if not skip_album and (not confirm_album or input('Play album: {}? '.format(album['title'])) == 'y'):
+            # TODO: perma-skip, minimum track count
+            if not skip_album and (not confirm_album or input('Play album: {} ({} tracks)? '.format(album['title'], album['tracks_count'])) == 'y'):
                 self.play_album(album['id'], cache_only=cache_only, skip_existing=skip_existing)
                 with open(album_log_file_name, 'a', opener=self.log_opener) as album_log:
                     album_log.write('{}\n'.format(album['id']))
