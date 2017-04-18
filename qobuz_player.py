@@ -34,3 +34,5 @@ qobuz_client = qobuz.QobuzApi(app_id, app_secret, user_auth_token, format_id, do
 
 artist = qobuz_client.get_artist_from_catalog(sys.argv[1])
 qobuz_client.play_artist(artist['id'])
+
+qobuz_client.play_favorite_albums(cache_only=True, skip_existing=True)
