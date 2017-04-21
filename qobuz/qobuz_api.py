@@ -312,7 +312,7 @@ class QobuzApi:
         response = self.search_catalog(album, 'albums')
         return response['albums']['items']
 
-    def play_favorites(self, favorite_type=None, limit=2, offset=0):
+    def play_favorites(self, favorite_type=None, limit=2, offset=0, cache_only=False, skip_existing=False):
         if favorite_type:
             params_type = '&type={}'.format(favorite_type)
         else:
@@ -322,23 +322,20 @@ class QobuzApi:
             'limit': limit,
             'offset': offset
         }
-        favorites_url = 'http://www.qobuz.com/api.json/0.2/favorite/getUserFavorites?&limit={limit}{params_type}&offset={offset}'.format_map(params)
-        json_response = self.get_json_from_url(favorites_url)
-        return json_response
+        while True:
+            favorites_url = 'http://www.qobuz.com/api.json/0.2/favorite/getUserFavorites?&limit={limit}{params_type}&offset={offset}'.format_map(params)
+            json_response = self.get_json_from_url(favorites_url)
+            # TODO: Handle all type
+            if not json_response[favorite_type]['items']:
+                break
+            for item in json_response[favorite_type]['items']:
+                print('Playing {}'.format(item['name']))
+                # TODO: Play artist or song type
+                self.play_artist_albums(item['id'], cache_only=cache_only, skip_existing=skip_existing)
+                params['offset'] += 1
 
     def play_favorite_albums(self, cache_only=False, skip_existing=False):
-        favorite_albums = self.play_favorites(favorite_type='albums')
-        for favorite_album in favorite_albums['albums']['items']:
-            self.play_album(favorite_album['id'], cache_only, skip_existing)
+        self.play_favorites(favorite_type='albums', cache_only=cache_only, skip_existing=skip_existing)
 
     def play_favorite_artists(self, cache_only=False, skip_existing=False):
-        not_empty = True
-        offset = 0
-        while True:
-            favorite_artists = self.play_favorites(favorite_type='artists', offset=offset)
-            if not favorite_artists['artists']['items']:
-                break
-            for favorite_artist in favorite_artists['artists']['items']:
-                print('Playing {}'.format(favorite_artist['name']))
-                offset += 1
-                #self.play_artist_albums(favorite_artist['id'], cache_only, skip_existing)
+        self.play_favorites(favorite_type='artists', cache_only=cache_only, skip_existing=skip_existing)
