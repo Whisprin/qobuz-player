@@ -350,10 +350,21 @@ class QobuzApi:
             if not json_response[favorite_type]['items']:
                 break
             for item in json_response[favorite_type]['items']:
-                print('Playing {}'.format(item['name']))
-                # TODO: Play artist or song type
-                self.play_artist_albums(item['id'], cache_only=cache_only, skip_existing=skip_existing)
+
+                if favorite_type == 'tracks':
+                    play_method = self.play_track
+                elif favorite_type == 'albums':
+                    play_method = self.play_album
+                elif favorite_type == 'artists':
+                    play_method = self.play_artist_albums
+                else:
+                    print('Empty or unkown type "{}" for "{}"'.format(favorite_type, item['name']))
+                    break
+                play_method(item['id'], cache_only=cache_only, skip_existing=skip_existing)
                 params['offset'] += 1
+
+    def play_favorite_tracks(self, cache_only=False, skip_existing=False):
+        self.play_favorites(favorite_type='tracks', cache_only=cache_only, skip_existing=skip_existing)
 
     def play_favorite_albums(self, cache_only=False, skip_existing=False):
         self.play_favorites(favorite_type='albums', cache_only=cache_only, skip_existing=skip_existing)
