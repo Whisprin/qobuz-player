@@ -244,12 +244,15 @@ class QobuzApi:
             if track_limit and played_track_count >= track_limit:
                 return
 
-    def play_artist_albums(self, artist_id, confirm_album=False, cache_only=False, skip_existing=False):
+    def play_artist_albums(self, artist_id, confirm_album=False, cache_only=False, skip_existing=False, minimum_track_count=4):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
         artist_name = artist_meta_data['name']
         print("Getting tracks for \"{}\"".format(artist_name))
 
         for album in artist_meta_data['albums']['items']:
+            if album['tracks_count'] < minimum_track_count:
+                print('Skipping {} ({} tracks) - below track count'.format(album['title'], album['tracks_count']))
+                continue
             skip_album = False
             album_log_file_name = 'artist-albums-{}.log'.format(artist_id)
             with open(album_log_file_name, 'a+', opener=self.log_opener) as album_log:
@@ -257,9 +260,27 @@ class QobuzApi:
                 for album_id in album_log.readlines():
                     if album_id.rstrip() == album['id']:
                         skip_album = True
-            # TODO: perma-skip, minimum track count
-            if not skip_album and (not confirm_album or input('Play album: {} ({} tracks)? '.format(album['title'], album['tracks_count'])) == 'y'):
+                        break
+            if skip_album:
+                print('Skipping {} ({} tracks) - already cached'.format(album['title'], album['tracks_count']))
+                continue
+            # TODO: perma-skip
+            confirmed_album = 'unconfirmed'
+            if confirm_album:
+                user_input = input('Play album: {} ({} tracks)? '.format(album['title'], album['tracks_count']))
+                if user_input == 'y':
+                    confirmed_album = 'play'
+                if user_input == 's':
+                    confirmed_album = 'log'
+                if user_input == 'a':
+                    confirmed_album = 'play'
+                    confirm_album = False
+            else:
+                confirmed_album = 'play'
+
+            if confirmed_album == 'play':
                 self.play_album(album['id'], cache_only=cache_only, skip_existing=skip_existing)
+            if confirmed_album == 'play' or confirmed_album == 'log':
                 with open(album_log_file_name, 'a', opener=self.log_opener) as album_log:
                     album_log.write('{}\n'.format(album['id']))
 
