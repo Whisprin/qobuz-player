@@ -267,7 +267,7 @@ class QobuzApi:
             # TODO: perma-skip
             confirmed_album = 'unconfirmed'
             if confirm_album:
-                user_input = input('Play album: {} ({} tracks)? '.format(album['title'], album['tracks_count']))
+                user_input = input('Play album: {} ({} tracks)? (y)es, (s)kip, (a)ll '.format(album['title'], album['tracks_count']))
                 if user_input == 'y':
                     confirmed_album = 'play'
                 if user_input == 's':
@@ -333,7 +333,7 @@ class QobuzApi:
         response = self.search_catalog(album, 'albums')
         return response['albums']['items']
 
-    def play_favorites(self, favorite_type=None, limit=2, offset=0, cache_only=False, skip_existing=False):
+    def play_favorites(self, favorite_type=None, limit=2, offset=0, cache_only=False, skip_existing=False, confirm_album=False):
         if favorite_type:
             params_type = '&type={}'.format(favorite_type)
         else:
@@ -342,6 +342,10 @@ class QobuzApi:
             'params_type': params_type,
             'limit': limit,
             'offset': offset
+        }
+        play_params = {
+            'cache_only': cache_only,
+            'skip_existing': skip_existing
         }
         while True:
             favorites_url = 'http://www.qobuz.com/api.json/0.2/favorite/getUserFavorites?&limit={limit}{params_type}&offset={offset}'.format_map(params)
@@ -357,10 +361,11 @@ class QobuzApi:
                     play_method = self.play_album
                 elif favorite_type == 'artists':
                     play_method = self.play_artist_albums
+                    play_params['confirm_album'] = True
                 else:
                     print('Empty or unkown type "{}" for "{}"'.format(favorite_type, item['name']))
                     break
-                play_method(item['id'], cache_only=cache_only, skip_existing=skip_existing)
+                play_method(item['id'], *play_params)
                 params['offset'] += 1
 
     def play_favorite_tracks(self, cache_only=False, skip_existing=False):
@@ -369,5 +374,5 @@ class QobuzApi:
     def play_favorite_albums(self, cache_only=False, skip_existing=False):
         self.play_favorites(favorite_type='albums', cache_only=cache_only, skip_existing=skip_existing)
 
-    def play_favorite_artists(self, cache_only=False, skip_existing=False):
-        self.play_favorites(favorite_type='artists', cache_only=cache_only, skip_existing=skip_existing)
+    def play_favorite_artists(self, cache_only=False, skip_existing=False, confirm_album=False):
+        self.play_favorites(favorite_type='artists', cache_only=cache_only, skip_existing=skip_existing, confirm_album=confirm_album)
