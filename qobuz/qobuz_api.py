@@ -18,6 +18,8 @@ class QobuzApi:
         self.app_id = app_id
         self.app_secret = app_secret
         self.user_auth_token = user_auth_token
+        self.track_id = 0
+        self.request_ts = int(time.time())
         self.format_id = format_id
         self.cache_dir = cache_dir
         self.log_dir = log_dir
@@ -39,7 +41,6 @@ class QobuzApi:
         return request_sig
 
     def get_file_url(self):
-        self.track_id = self.track_id
         self.request_ts = int(time.time())
         params = {
             'track_id': self.track_id,
