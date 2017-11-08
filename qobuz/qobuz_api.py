@@ -25,9 +25,6 @@ class QobuzApi:
     def set_track_id(self, track_id):
         self.track_id = track_id
 
-    def format_id(self, format_id):
-        self.format_id = format_id
-
     def get_request_sig(self):
         params = {
             'format_id': self.format_id,
