@@ -265,7 +265,7 @@ class QobuzApi:
             # TODO: perma-skip
             confirmed_album = 'unconfirmed'
             if confirm_album:
-                user_input = input('Play album: {} ({} tracks)? (y)es, (s)kip, (a)ll '.format(album['title'], album['tracks_count']))
+                user_input = input('Play album: {} ({} tracks, {})? (y)es, (s)kip, (a)ll '.format(album['title'], album['tracks_count'], time.gmtime(album['released_at']).tm_year))
                 if user_input == 'y':
                     confirmed_album = 'play'
                 if user_input == 's':
