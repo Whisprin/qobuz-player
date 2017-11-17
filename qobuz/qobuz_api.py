@@ -1,17 +1,17 @@
 import hashlib
 import time
-import requests
 import json
 import os
 import urllib.request
 import shutil
 import subprocess
+import requests
 import taglib
 from unidecode import unidecode
 
 class QobuzFileError(Exception):
-    def __init__(self,*args,**kwargs):
-        Exception.__init__(self,*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args, **kwargs)
 
 class QobuzApi:
     def __init__(self, app_id, app_secret, user_auth_token, format_id=6, cache_dir='.', log_dir='.'):
