@@ -102,7 +102,7 @@ class QobuzApi:
 
         meta_data = {
             'album_artist': json_response['album']['artist']['name'],
-            'artist': json_response.get('performer', json_response['composer'])['name'],
+            'artist': json_response.get('performer', json_response.get('composer'))['name'],
             'album' :json_response['album']['title'],
             'genre': json_response['album']['genre']['name'],
             'title': json_response['title'],
