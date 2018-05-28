@@ -61,8 +61,13 @@ class QobuzApi:
             raise QobuzFileError("Track {} is a sample.".format(self.track_id))
         return file_url
 
-    def print_as_json(self, data):
-        print(json.dumps(data, indent=4, sort_keys=True))
+    @staticmethod
+    def print_as_json(data):
+        print(QobuzApi.get_as_json(data))
+
+    @staticmethod
+    def get_as_json(data):
+        return json.dumps(data, indent=4, sort_keys=True)
 
     def get_save_name(self, file_name, file_type):
         if file_name.startswith('.'):
@@ -121,9 +126,6 @@ class QobuzApi:
 
     def cache_opener(self, path, flags):
         return self.absolute_opener(path, flags, self.cache_dir)
-
-    def log_opener(self, path, flags):
-        return self.absolute_opener(path, flags, self.log_dir)
 
     def cache_file(self, file_url, file_path):
         temp_file_path = "{}.qtmp".format(file_path[:-5])
@@ -209,7 +211,7 @@ class QobuzApi:
         json_response = self.get_json_from_url(album_url)
         return json_response
 
-    def get_meta_data_for_artist_id(self, artist_id, extra=''):
+    def get_meta_data_for_artist_id(self, artist_id, extra='focus'):
         params = {
             'artist_id': artist_id,
             'extra': extra
@@ -252,13 +254,6 @@ class QobuzApi:
                 print('Skipping {} ({} tracks) - below track count'.format(album['title'], album['tracks_count']))
                 continue
             skip_album = False
-            album_log_file_name = 'artist-albums-{}.log'.format(artist_id)
-            with open(album_log_file_name, 'a+', opener=self.log_opener) as album_log:
-                album_log.seek(0)
-                for album_id in album_log.readlines():
-                    if album_id.rstrip() == album['id']:
-                        skip_album = True
-                        break
             if skip_album:
                 print('Skipping {} ({} tracks) - already cached'.format(album['title'], album['tracks_count']))
                 continue
@@ -278,12 +273,13 @@ class QobuzApi:
 
             if confirmed_album == 'play':
                 self.play_album(album['id'], cache_only=cache_only, skip_existing=skip_existing)
-            if confirmed_album == 'play' or confirmed_album == 'log':
-                with open(album_log_file_name, 'a', opener=self.log_opener) as album_log:
-                    album_log.write('{}\n'.format(album['id']))
 
-        with open('artists.log', 'a', opener=self.log_opener) as artist_log:
-            artist_log.write('{},{},{}\n'.format(artist_id, artist_name, time.time()))
+    def get_artist_albums(self, artist, minimum_track_count=4):
+        artist_id = artist['id']
+        artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
+        for album in artist_meta_data['albums']['items']:
+            if album['tracks_count'] >= minimum_track_count:
+                yield {'id': album['id'], 'title': album['title']}
 
     def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
         params = {
@@ -319,7 +315,7 @@ class QobuzApi:
         response = self.search_catalog(artist, 'artists', limit=limit)
         return response['artists']['items']
 
-    def get_artist_from_catalog(self, artist):
+    def get_artist_by_name(self, artist):
         artists = self.search_catalog_for_artists(artist, limit=5)
         # sometimes another but the first result is a perfect match
         for artist_item in artists:
