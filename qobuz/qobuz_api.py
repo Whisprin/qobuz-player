@@ -323,8 +323,7 @@ class QobuzApi:
         artists = self.search_catalog_for_artists(artist, limit=5)
         # sometimes another but the first result is a perfect match
         for artist_item in artists:
-            #if unidecode(artist.lower()) == artist_item['name'].lower():
-            if artist == artist_item['name']:
+            if artist.lower() == artist_item['name'].lower():
                 return artist_item
 
     def search_catalog_for_albums(self, album, limit=2):
