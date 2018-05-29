@@ -279,7 +279,9 @@ class QobuzApi:
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
         for album in artist_meta_data['albums']['items']:
             if album['tracks_count'] >= minimum_track_count:
-                yield {'id': album['id'], 'title': album['title']}
+                released_at = time.gmtime(album['released_at'])
+                release_date = f'{released_at.tm_year}-{released_at.tm_mon:02}-{released_at.tm_mday:02}'
+                yield {'id': album['id'], 'title': album['title'], 'tracks_count': album['tracks_count'], 'release_date': release_date}
 
     def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
         params = {
