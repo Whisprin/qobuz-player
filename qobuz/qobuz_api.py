@@ -7,13 +7,14 @@ import shutil
 import subprocess
 import requests
 import taglib
-from unidecode import unidecode
 
 class QobuzFileError(Exception):
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
 
 class QobuzApi:
+    album_web_url = 'https://play.qobuz.com/album/{id}'
+
     def __init__(self, app_id, app_secret, user_auth_token, format_id=6, cache_dir='.', log_dir='.'):
         self.app_id = app_id
         self.app_secret = app_secret
@@ -281,7 +282,8 @@ class QobuzApi:
             if album['tracks_count'] >= minimum_track_count:
                 released_at = time.gmtime(album['released_at'])
                 release_date = f'{released_at.tm_year}-{released_at.tm_mon:02}-{released_at.tm_mday:02}'
-                yield {'id': album['id'], 'title': album['title'], 'tracks_count': album['tracks_count'], 'release_date': release_date}
+                album_url = QobuzApi.album_web_url.format_map(album)
+                yield {'id': album['id'], 'title': album['title'], 'tracks_count': album['tracks_count'], 'release_date': release_date, 'url': album_url}
 
     def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
         params = {
