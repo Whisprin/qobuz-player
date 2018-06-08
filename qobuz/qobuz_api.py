@@ -24,6 +24,7 @@ class QobuzApi:
         self.format_id = format_id
         self.cache_dir = cache_dir
         self.log_dir = log_dir
+        self.cache_dir_fd = None
 
     def set_track_id(self, track_id):
         self.track_id = track_id
@@ -121,12 +122,10 @@ class QobuzApi:
         }
         return meta_data
 
-    def absolute_opener(self, path, flags, base_path):
-        dir_fd = os.open(base_path, os.O_RDONLY, 0o600)
-        return os.open(path, flags, dir_fd=dir_fd)
-
     def cache_opener(self, path, flags):
-        return self.absolute_opener(path, flags, self.cache_dir)
+        if not self.cache_dir_fd:
+            self.cache_dir_fd = os.open(self.cache_dir, os.O_RDONLY, 0o600)
+        return os.open(path, flags, dir_fd=self.cache_dir_fd)
 
     def cache_file(self, file_url, file_path):
         temp_file_path = "{}.qtmp".format(file_path[:-5])
