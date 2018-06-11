@@ -228,8 +228,10 @@ class QobuzApi:
             'album': album_meta_data['title']
         }
         print("Getting tracks for \"{artist} - {album}\"".format_map(params))
+        success = True
         for track in album_meta_data['tracks']['items']:
-            self.play_track(track['id'], cache_only=cache_only, skip_existing=skip_existing)
+            success &= self.play_track(track['id'], cache_only=cache_only, skip_existing=skip_existing)
+        return success
 
     def play_artist(self, artist_id, cache_only=False, track_limit=None):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='tracks')
@@ -278,11 +280,14 @@ class QobuzApi:
         artist_id = artist['id']
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
         for album in artist_meta_data['albums']['items']:
-            if album['tracks_count'] >= minimum_track_count:
-                released_at = time.gmtime(album['released_at'])
-                release_date = f'{released_at.tm_year}-{released_at.tm_mon:02}-{released_at.tm_mday:02}'
-                album_url = QobuzApi.album_web_url.format_map(album)
-                yield {'id': album['id'], 'title': album['title'], 'tracks_count': album['tracks_count'], 'release_date': release_date, 'url': album_url}
+            yield self.get_album(album, minimum_track_count)
+
+    def get_album(self, album, minimum_track_count=4):
+        if album.get('tracks_count', 0) >= minimum_track_count:
+            released_at = time.gmtime(album['released_at'])
+            release_date = f'{released_at.tm_year}-{released_at.tm_mon:02}-{released_at.tm_mday:02}'
+            album_url = QobuzApi.album_web_url.format_map(album)
+            return {'id': album['id'], 'title': album['title'], 'tracks_count': album['tracks_count'], 'released_at': released_at, 'release_date': release_date, 'url': album_url}
 
     def play_similar_artists(self, artist_id, artist_limit=3, track_limit=1, cache_only=False):
         params = {
