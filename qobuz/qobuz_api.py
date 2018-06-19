@@ -164,14 +164,19 @@ class QobuzApi:
             track_exists = True
             print("{title} already exists".format_map(params))
         else:
+            missing_file_path = '{}.missing'.format(file_path)
             try:
                 file_url = self.get_file_url()
             except QobuzFileError as e:
                 print(e)
-                missing_file_path = '{}.missing'.format(file_path)
                 with open(missing_file_path, 'w', opener=self.cache_opener):
                     pass
                 return False
+            else:
+                absolute_file_path = self.get_cache_file_path(missing_file_path)
+                # remove missing file placeholder if it's there from a previous run
+                if os.path.isfile(absolute_file_path):
+                    os.unlink(absolute_file_path)
             print("Caching {title}...".format_map(params))
             self.cache_file(file_url, file_path)
             self.tag_file(file_path, track_meta_data)
@@ -280,7 +285,9 @@ class QobuzApi:
         artist_id = artist['id']
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='albums')
         for album in artist_meta_data['albums']['items']:
-            yield self.get_album(album, minimum_track_count)
+            album_meta_data = self.get_album(album, minimum_track_count)
+            if album_meta_data:
+                yield album_meta_data
 
     def get_album(self, album, minimum_track_count=4):
         if album.get('tracks_count', 0) >= minimum_track_count:
