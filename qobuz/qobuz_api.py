@@ -12,6 +12,10 @@ class QobuzFileError(Exception):
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
 
+class QobuzIncompleteAlbumError(Exception):
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args, **kwargs)
+
 class QobuzApi:
     album_web_url = 'https://play.qobuz.com/album/{id}'
 
@@ -236,7 +240,8 @@ class QobuzApi:
         success = True
         for track in album_meta_data['tracks']['items']:
             success &= self.play_track(track['id'], cache_only=cache_only, skip_existing=skip_existing)
-        return success
+        if not success:
+            raise QobuzIncompleteAlbumError(album_meta_data)
 
     def play_artist(self, artist_id, cache_only=False, track_limit=None):
         artist_meta_data = self.get_meta_data_for_artist_id(artist_id, extra='tracks')
