@@ -55,7 +55,7 @@ class QobuzApi:
             'request_sig': self.get_request_sig()
         }
 
-        get_file_url = "http://www.qobuz.com/api.json/0.2/track/getFileUrl?track_id={track_id}&format_id={format_id}&intent=stream&request_ts={request_ts}&request_sig={request_sig}".format_map(params)
+        get_file_url = "https://www.qobuz.com/api.json/0.2/track/getFileUrl?track_id={track_id}&format_id={format_id}&intent=stream&request_ts={request_ts}&request_sig={request_sig}".format_map(params)
 
         json_response = self.get_json_from_url(get_file_url)
 
@@ -108,7 +108,7 @@ class QobuzApi:
         return json_response
 
     def get_meta_data(self):
-        meta_data_url = "http://www.qobuz.com/api.json/0.2/track/get?track_id={}".format(self.track_id)
+        meta_data_url = "https://www.qobuz.com/api.json/0.2/track/get?track_id={}".format(self.track_id)
         json_response = self.get_json_from_url(meta_data_url)
 
         meta_data = {
@@ -131,10 +131,25 @@ class QobuzApi:
             self.cache_dir_fd = os.open(self.cache_dir, os.O_RDONLY, 0o600)
         return os.open(path, flags, dir_fd=self.cache_dir_fd)
 
-    def cache_file(self, file_url, file_path):
+    def cache_file(self, file_url, file_path, is_cover = False):
         temp_file_path = "{}.qtmp".format(file_path[:-5])
+        headers = {
+            'Host': 'streaming2.qobuz.com',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0',
+            'Accept': 'audio/webm,audio/ogg,audio/wav,audio/*;q=0.9,application/ogg;q=0.7,video/*;q=0.6,*/*;q=0.5',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Referer': 'https://play.qobuz.com/album/0774204873820',
+            'Range': 'bytes=0-',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'TE': 'Trailers'
+        }
         try:
-            response = urllib.request.urlopen(file_url)
+            if is_cover:
+                req = urllib.request.Request(file_url)
+            else:
+                req = urllib.request.Request(file_url, headers=headers)
+            response = urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
             print("{} ({}): {}".format(e.reason, e.code, file_url))
             return
@@ -190,7 +205,7 @@ class QobuzApi:
             cover_path = os.path.join(album_path, 'folder.jpg')
 
             if not os.path.isfile(cover_path):
-                self.cache_file(cover_url, cover_path)
+                self.cache_file(cover_url, cover_path, is_cover = True)
 
         if not cache_only and not (skip_existing and track_exists):
             print("Playing \"{title}\" for {duration}s".format_map(params))
@@ -226,7 +241,7 @@ class QobuzApi:
             'extra': extra
         }
 
-        artist_url = "http://www.qobuz.com/api.json/0.2/artist/get?artist_id={artist_id}&limit=50&extra={extra}".format_map(params)
+        artist_url = "https://www.qobuz.com/api.json/0.2/artist/get?artist_id={artist_id}&limit=50&extra={extra}".format_map(params)
         json_response = self.get_json_from_url(artist_url)
         return json_response
 
@@ -306,7 +321,7 @@ class QobuzApi:
             'artist_id': artist_id,
             'limit': artist_limit
         }
-        similar_artist_url = 'http://www.qobuz.com/api.json/0.2/artist/getSimilarArtists?artist_id={artist_id}&limit={limit}'.format_map(params)
+        similar_artist_url = 'https://www.qobuz.com/api.json/0.2/artist/getSimilarArtists?artist_id={artist_id}&limit={limit}'.format_map(params)
         similar_artists = self.get_json_from_url(similar_artist_url)
         for artist in similar_artists['artists']['items']:
             self.play_artist(artist['id'], track_limit=track_limit, cache_only=cache_only)
@@ -327,7 +342,7 @@ class QobuzApi:
             'limit': params_limit
         }
 
-        search_url = "http://www.qobuz.com/api.json/0.2/catalog/search?query={query}{type}{limit}".format_map(params)
+        search_url = "https://www.qobuz.com/api.json/0.2/catalog/search?query={query}{type}{limit}".format_map(params)
         json_response = self.get_json_from_url(search_url)
         return json_response
 
@@ -361,7 +376,7 @@ class QobuzApi:
             'skip_existing': skip_existing
         }
         while True:
-            favorites_url = 'http://www.qobuz.com/api.json/0.2/favorite/getUserFavorites?&limit={limit}{params_type}&offset={offset}'.format_map(params)
+            favorites_url = 'https://www.qobuz.com/api.json/0.2/favorite/getUserFavorites?&limit={limit}{params_type}&offset={offset}'.format_map(params)
             json_response = self.get_json_from_url(favorites_url)
             # TODO: Handle all type
             if not json_response[favorite_type]['items']:
