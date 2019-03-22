@@ -6,6 +6,7 @@ import os
 import urllib.request
 import shutil
 import subprocess
+
 import requests
 import taglib
 
@@ -23,6 +24,7 @@ class FavoriteType(Enum):
     ARTIST = 'artists'
 
 class QobuzApi:
+    API_ENDPOINT = 'https://www.qobuz.com/api.json/0.2'
     album_web_url = 'https://play.qobuz.com/album/{id}'
 
     def __init__(self, app_id, app_secret, user_auth_token, format_id=6, cache_dir='.', log_dir='.'):
