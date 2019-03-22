@@ -1,3 +1,4 @@
+from enum import Enum
 import hashlib
 import time
 import json
@@ -15,6 +16,11 @@ class QobuzFileError(Exception):
 class QobuzIncompleteAlbumError(Exception):
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
+
+class FavoriteType(Enum):
+    TRACK = 'tracks'
+    ALBUM = 'albums'
+    ARTIST = 'artists'
 
 class QobuzApi:
     album_web_url = 'https://play.qobuz.com/album/{id}'
@@ -404,3 +410,14 @@ class QobuzApi:
 
     def play_favorite_artists(self, cache_only=False, skip_existing=False, confirm_album=False):
         self.play_favorites(favorite_type='artists', cache_only=cache_only, skip_existing=skip_existing, confirm_album=confirm_album)
+
+    def get_favorites(self, favorite_type: FavoriteType, limit: int = 10, offset: int = 0):
+        while True:
+            favorites_url = f'https://www.qobuz.com/api.json/0.2/favorite/getUserFavorites?type={favorite_type.value}&limit={limit}&offset={offset}'
+            json_response = self.get_json_from_url(favorites_url)
+            if not json_response[favorite_type.value]['items']:
+                break
+            for favorite in json_response[favorite_type.value]['items']:
+                yield favorite
+            offset += limit
+
