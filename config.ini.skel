@@ -5,7 +5,8 @@ user_auth_token =
 
 [DOWNLOAD]
 directory =
-format_id =
+; format mp3: 5, flac: 6
+format_id = 6
 
 [LASTFM]
 api_key =
