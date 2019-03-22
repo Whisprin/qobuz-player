@@ -27,12 +27,12 @@ config.read(CONFIG_PATH)
 app_secret = config['QOBUZ']['app_secret']
 app_id = config['QOBUZ']['app_id']
 user_auth_token = config['QOBUZ']['user_auth_token']
-download_dir = config['DOWNLOAD']['directory']
+cache_dir = config['DOWNLOAD']['directory']
 format_id = int(config['DOWNLOAD']['format_id'])
 log_dir = config['LOG']['directory']
 
 os.makedirs(download_dir, exist_ok=True)
 
-qobuz_client = qobuz.QobuzApi(app_id, app_secret, user_auth_token, format_id, download_dir, log_dir)
+qobuz_client = qobuz.QobuzApi(app_id, app_secret, user_auth_token, format_id, cache_dir, log_dir)
 
 embed()
