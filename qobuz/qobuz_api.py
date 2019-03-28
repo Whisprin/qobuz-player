@@ -137,7 +137,7 @@ class QobuzApi:
     def cache_opener(self, path, flags):
         if not self.cache_dir_fd:
             self.cache_dir_fd = os.open(self.cache_dir, os.O_RDONLY, 0o600)
-        return os.open(path, flags, dir_fd=self.cache_dir_fd)
+        return os.open(path, flags, 0o660, dir_fd=self.cache_dir_fd)
 
     def cache_file(self, file_url, file_path, is_cover = False):
         temp_file_path = "{}.qtmp".format(file_path[:-5])
