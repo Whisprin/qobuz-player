@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qobuz-api",
-    version="0.0.2",
+    version="0.0.3",
     author="Robert Sprunk",
     author_email="github@sprunk.me",
     description="An unofficial Qobuz music streaming API client",
